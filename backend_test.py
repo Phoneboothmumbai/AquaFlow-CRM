@@ -19,7 +19,10 @@ class PoolMaintenanceAPITester:
             'amc_plan_id': None,
             'engineer_id': None,
             'amc_assignment_id': None,
-            'service_id': None
+            'service_id': None,
+            'lead_id': None,
+            'quotation_id': None,
+            'work_order_id': None
         }
 
     def run_test(self, name: str, method: str, endpoint: str, expected_status: int, 
