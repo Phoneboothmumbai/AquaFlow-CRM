@@ -596,14 +596,14 @@ export default function CustomersPage() {
                             <div className="space-y-2">
                                 <Label>Assign Engineer (Optional)</Label>
                                 <Select
-                                    value={newAMC.assigned_engineer_id}
-                                    onValueChange={(value) => setNewAMC({ ...newAMC, assigned_engineer_id: value })}
+                                    value={newAMC.assigned_engineer_id || "none"}
+                                    onValueChange={(value) => setNewAMC({ ...newAMC, assigned_engineer_id: value === "none" ? "" : value })}
                                 >
                                     <SelectTrigger data-testid="amc-engineer-select">
                                         <SelectValue placeholder="Select engineer" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">None (Assign later)</SelectItem>
+                                        <SelectItem value="none">None (Assign later)</SelectItem>
                                         {engineers.map((eng) => (
                                             <SelectItem key={eng.id} value={eng.id}>
                                                 {eng.name}
