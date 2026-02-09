@@ -1785,6 +1785,266 @@ async def get_crm_dashboard(user: dict = Depends(require_company_admin)):
         "pipeline_value": pipeline_value
     }
 
+# --- COMMENTS ---
+
+from crm_models import CommentCreate, CommentResponse, StageHistoryResponse, TaskCreate, TaskUpdate, TaskResponse
+
+@api_router.post("/crm/work-orders/{work_order_id}/comments", response_model=CommentResponse)
+async def add_comment(work_order_id: str, data: CommentCreate, user: dict = Depends(require_company_admin)):
+    await check_crm_enabled(user)
+    
+    # Verify work order exists
+    work_order = await db.work_orders.find_one({"id": work_order_id, "company_id": user["company_id"]}, {"_id": 0})
+    if not work_order:
+        raise HTTPException(status_code=404, detail="Work order not found")
+    
+    comment_id = str(uuid.uuid4())
+    comment_doc = {
+        "id": comment_id,
+        "work_order_id": work_order_id,
+        "user_id": user["id"],
+        "user_name": user["name"],
+        "message": data.message,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.comments.insert_one(comment_doc)
+    
+    return CommentResponse(**comment_doc)
+
+@api_router.get("/crm/work-orders/{work_order_id}/comments", response_model=List[CommentResponse])
+async def get_comments(work_order_id: str, user: dict = Depends(require_company_admin)):
+    await check_crm_enabled(user)
+    
+    comments = await db.comments.find({"work_order_id": work_order_id}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    return [CommentResponse(**c) for c in comments]
+
+# --- STAGE HISTORY ---
+
+@api_router.get("/crm/work-orders/{work_order_id}/history", response_model=List[StageHistoryResponse])
+async def get_stage_history(work_order_id: str, user: dict = Depends(require_company_admin)):
+    await check_crm_enabled(user)
+    
+    history = await db.stage_history.find({"work_order_id": work_order_id}, {"_id": 0}).sort("created_at", 1).to_list(1000)
+    return [StageHistoryResponse(**h) for h in history]
+
+@api_router.put("/crm/work-orders/{work_order_id}/stage")
+async def update_work_order_stage(work_order_id: str, stage: str, notes: Optional[str] = None, user: dict = Depends(require_company_admin)):
+    await check_crm_enabled(user)
+    
+    # Valid stages
+    valid_stages = ["pending", "boq", "procurement", "material_delivered", "installation", "testing", "commissioning", "ready", "converted_to_amc"]
+    if stage not in valid_stages:
+        raise HTTPException(status_code=400, detail=f"Invalid stage. Must be one of: {valid_stages}")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    
+    # Update work order status
+    update_data = {"status": stage, "updated_at": now}
+    
+    # Set dates based on stage
+    if stage == "boq":
+        update_data["boq_date"] = now
+    elif stage == "procurement":
+        update_data["procurement_date"] = now
+    elif stage == "material_delivered":
+        update_data["material_delivered_date"] = now
+    elif stage == "installation":
+        update_data["installation_date"] = now
+        update_data["actual_start_date"] = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    elif stage == "testing":
+        update_data["testing_date"] = now
+    elif stage == "commissioning":
+        update_data["commissioning_date"] = now
+    elif stage == "ready":
+        update_data["ready_date"] = now
+        update_data["actual_end_date"] = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    
+    await db.work_orders.update_one(
+        {"id": work_order_id, "company_id": user["company_id"]},
+        {"$set": update_data}
+    )
+    
+    # Record in stage history
+    history_id = str(uuid.uuid4())
+    history_doc = {
+        "id": history_id,
+        "work_order_id": work_order_id,
+        "stage": stage,
+        "changed_by": user["id"],
+        "changed_by_name": user["name"],
+        "notes": notes,
+        "created_at": now
+    }
+    await db.stage_history.insert_one(history_doc)
+    
+    return {"message": f"Stage updated to {stage}"}
+
+# --- TASKS ---
+
+@api_router.post("/crm/tasks", response_model=TaskResponse)
+async def create_task(data: TaskCreate, user: dict = Depends(require_company_admin)):
+    await check_crm_enabled(user)
+    
+    # Verify work order exists
+    work_order = await db.work_orders.find_one({"id": data.work_order_id, "company_id": user["company_id"]}, {"_id": 0})
+    if not work_order:
+        raise HTTPException(status_code=404, detail="Work order not found")
+    
+    # Get assigned user name
+    assigned_user = await db.users.find_one({"id": data.assigned_to}, {"_id": 0})
+    if not assigned_user:
+        # Check engineers
+        engineer = await db.engineers.find_one({"id": data.assigned_to}, {"_id": 0})
+        assigned_name = engineer["name"] if engineer else "Unknown"
+    else:
+        assigned_name = assigned_user["name"]
+    
+    now = datetime.now(timezone.utc).isoformat()
+    task_id = str(uuid.uuid4())
+    
+    task_doc = {
+        "id": task_id,
+        "company_id": user["company_id"],
+        **data.model_dump(),
+        "status": "pending",
+        "created_at": now,
+        "updated_at": now
+    }
+    await db.tasks.insert_one(task_doc)
+    
+    return TaskResponse(**task_doc, assigned_to_name=assigned_name)
+
+@api_router.get("/crm/tasks", response_model=List[TaskResponse])
+async def get_tasks(work_order_id: Optional[str] = None, status: Optional[str] = None, user: dict = Depends(require_company_admin)):
+    await check_crm_enabled(user)
+    
+    query = {"company_id": user["company_id"]}
+    if work_order_id:
+        query["work_order_id"] = work_order_id
+    if status:
+        query["status"] = status
+    
+    tasks = await db.tasks.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    
+    result = []
+    for task in tasks:
+        assigned_user = await db.users.find_one({"id": task["assigned_to"]}, {"_id": 0})
+        if not assigned_user:
+            engineer = await db.engineers.find_one({"id": task["assigned_to"]}, {"_id": 0})
+            assigned_name = engineer["name"] if engineer else "Unknown"
+        else:
+            assigned_name = assigned_user["name"]
+        result.append(TaskResponse(**task, assigned_to_name=assigned_name))
+    
+    return result
+
+@api_router.put("/crm/tasks/{task_id}", response_model=TaskResponse)
+async def update_task(task_id: str, data: TaskUpdate, user: dict = Depends(require_company_admin)):
+    await check_crm_enabled(user)
+    
+    update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.tasks.update_one(
+        {"id": task_id, "company_id": user["company_id"]},
+        {"$set": update_data}
+    )
+    
+    task = await db.tasks.find_one({"id": task_id}, {"_id": 0})
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    assigned_user = await db.users.find_one({"id": task["assigned_to"]}, {"_id": 0})
+    if not assigned_user:
+        engineer = await db.engineers.find_one({"id": task["assigned_to"]}, {"_id": 0})
+        assigned_name = engineer["name"] if engineer else "Unknown"
+    else:
+        assigned_name = assigned_user["name"]
+    
+    return TaskResponse(**task, assigned_to_name=assigned_name)
+
+@api_router.delete("/crm/tasks/{task_id}")
+async def delete_task(task_id: str, user: dict = Depends(require_company_admin)):
+    await check_crm_enabled(user)
+    
+    result = await db.tasks.delete_one({"id": task_id, "company_id": user["company_id"]})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return {"message": "Task deleted"}
+
+# --- WORK ORDER DETAIL WITH TIMELINE ---
+
+@api_router.get("/crm/work-orders/{work_order_id}/detail")
+async def get_work_order_detail(work_order_id: str, user: dict = Depends(require_company_admin)):
+    await check_crm_enabled(user)
+    
+    work_order = await db.work_orders.find_one({"id": work_order_id, "company_id": user["company_id"]}, {"_id": 0})
+    if not work_order:
+        raise HTTPException(status_code=404, detail="Work order not found")
+    
+    # Get related data
+    lead = await db.leads.find_one({"id": work_order["lead_id"]}, {"_id": 0})
+    quotation = await db.quotations.find_one({"id": work_order["quotation_id"]}, {"_id": 0})
+    
+    # Get comments
+    comments = await db.comments.find({"work_order_id": work_order_id}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    
+    # Get stage history
+    history = await db.stage_history.find({"work_order_id": work_order_id}, {"_id": 0}).sort("created_at", 1).to_list(100)
+    
+    # Get tasks
+    tasks = await db.tasks.find({"work_order_id": work_order_id}, {"_id": 0}).to_list(100)
+    for task in tasks:
+        assigned_user = await db.users.find_one({"id": task["assigned_to"]}, {"_id": 0})
+        if not assigned_user:
+            engineer = await db.engineers.find_one({"id": task["assigned_to"]}, {"_id": 0})
+            task["assigned_to_name"] = engineer["name"] if engineer else "Unknown"
+        else:
+            task["assigned_to_name"] = assigned_user["name"]
+    
+    # Get BOQ items
+    boq_items = await db.boq_items.find({"work_order_id": work_order_id}, {"_id": 0}).to_list(100)
+    
+    # Get deliveries
+    deliveries = await db.deliveries.find({"work_order_id": work_order_id}, {"_id": 0}).to_list(100)
+    
+    # Build timeline
+    timeline = []
+    
+    # Add stage history to timeline
+    for h in history:
+        timeline.append({
+            "type": "stage_change",
+            "stage": h["stage"],
+            "date": h["created_at"],
+            "by": h["changed_by_name"],
+            "notes": h.get("notes")
+        })
+    
+    # Add work order creation
+    timeline.insert(0, {
+        "type": "created",
+        "stage": "pending",
+        "date": work_order["created_at"],
+        "by": "System",
+        "notes": f"Work order {work_order['work_order_number']} created"
+    })
+    
+    # Sort timeline by date
+    timeline.sort(key=lambda x: x["date"])
+    
+    return {
+        "work_order": work_order,
+        "lead": lead,
+        "quotation": quotation,
+        "comments": comments,
+        "history": history,
+        "tasks": tasks,
+        "boq_items": boq_items,
+        "deliveries": deliveries,
+        "timeline": timeline
+    }
+
 # ==================== HEALTH CHECK ====================
 
 @api_router.get("/health")
