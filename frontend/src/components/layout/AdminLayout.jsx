@@ -70,7 +70,7 @@ export function AdminLayout({ children }) {
                 >
                     <Menu className="h-6 w-6" />
                 </Button>
-                <h1 className="font-heading font-semibold text-lg">Graand Prix</h1>
+                <h1 className="font-heading font-semibold text-lg">AquaFlow CRM</h1>
                 <div className="w-10" />
             </header>
 
@@ -99,7 +99,7 @@ export function AdminLayout({ children }) {
                                 <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
                                     <Droplets className="h-5 w-5 text-white" />
                                 </div>
-                                <span className="font-heading font-bold text-lg">Graand Prix</span>
+                                <span className="font-heading font-bold text-lg">AquaFlow CRM</span>
                             </div>
                         )}
                         {collapsed && (
