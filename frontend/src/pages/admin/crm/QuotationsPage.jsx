@@ -34,7 +34,7 @@ import {
     Briefcase
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatDate } from '../../lib/utils';
+import { formatDate } from '../../../lib/utils';
 
 const statusOptions = [
     { value: 'draft', label: 'Draft', color: 'bg-slate-100 text-slate-700' },
