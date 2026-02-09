@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 
 class PoolMaintenanceAPITester:
-    def __init__(self, base_url="https://graand-swim.preview.emergentagent.com"):
+    def __init__(self, base_url="https://poolpro-7.preview.emergentagent.com"):
         self.base_url = base_url
         self.admin_token = None
         self.engineer_token = None
