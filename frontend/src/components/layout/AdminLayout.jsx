@@ -44,6 +44,14 @@ export function AdminLayout({ children }) {
     const navigate = useNavigate();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [collapsed, setCollapsed] = useState(false);
+    const [crmEnabled, setCrmEnabled] = useState(false);
+
+    useEffect(() => {
+        // Check if CRM is enabled for this company
+        companyAPI.get().then(res => {
+            setCrmEnabled(res.data.crm_enabled || false);
+        }).catch(() => {});
+    }, []);
 
     const handleLogout = () => {
         logout();
