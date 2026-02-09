@@ -1,18 +1,19 @@
 # Graand Prix - Swimming Pool Maintenance SaaS Platform
 
 ## Original Problem Statement
-Cloud-based SaaS platform for swimming pool maintenance companies working on AMC (Annual Maintenance Contract) models. Multi-tenant system with Company Portal, Engineer Portal, and Customer Portal.
+Cloud-based SaaS platform for swimming pool maintenance companies working on AMC (Annual Maintenance Contract) models. Multi-tenant system with Company Portal, Engineer Portal, and Customer Portal. Optional Sales CRM module for complete sales lifecycle management.
 
 ## Architecture
 - **Backend**: FastAPI + MongoDB (motor async driver)
 - **Frontend**: React 19 + TailwindCSS + Shadcn/UI
 - **Authentication**: JWT-based with role-based access control
-- **Database**: MongoDB with collections for users, companies, customers, pools, amc_plans, amc_assignments, services, service_logs, engineers
+- **Database**: MongoDB with collections for users, companies, customers, pools, amc_plans, amc_assignments, services, service_logs, engineers, leads, quotations, work_orders, boq_items, deliveries, installations
 
 ## User Personas
 1. **Company Admin**: Pool service company owner/manager
 2. **Engineer/Technician**: Field service technician
 3. **Customer**: End customer with pool AMC contract
+4. **Sales Team**: (via CRM module) Manages leads and quotations
 
 ## Core Requirements (Static)
 - [x] JWT Authentication with 3 roles
@@ -27,11 +28,11 @@ Cloud-based SaaS platform for swimming pool maintenance companies working on AMC
 - [x] Role-based access control
 - [x] Data isolation per company
 
-## What's Been Implemented (MVP - Feb 2026)
+## What's Been Implemented
 
-### Backend (FastAPI)
+### Core AMC System (Feb 2026)
 - Auth endpoints: register, login, me
-- Company management
+- Company management with branding settings
 - Customer CRUD with auto customer user creation
 - Pool management
 - AMC Plan CRUD with checklist items
@@ -43,26 +44,38 @@ Cloud-based SaaS platform for swimming pool maintenance companies working on AMC
 - Customer portal endpoints
 - Dashboard statistics
 
-### Frontend (React)
-- Login/Register pages with beautiful pool background
-- Admin Portal:
-  - Dashboard with stats and today's services
-  - Customers management with pools and AMC assignment
-  - Pools overview
-  - AMC Plans management with checklist
-  - Services schedule with date navigation
-  - Engineers management
-  - Company settings
-- Engineer Portal (Mobile-first):
-  - Today's jobs dashboard
-  - Start/End service with GPS capture
-  - Service checklist and readings
-  - Service history
-  - Profile page
-- Customer Portal (Mobile-first):
-  - Dashboard with AMC overview
-  - Service history with details
-  - Pool listing
+### Sales CRM Module (Feb 2026) - OPTIONAL
+**Can be enabled/disabled per company in Settings**
+
+Backend:
+- Leads management (create, update status, delete)
+- Quotations with line items, tax, validity
+- Quotation revisions and status workflow
+- Work Orders from approved quotations
+- BOQ (Bill of Quantity) management
+- Delivery tracking
+- Installation scheduling and tracking
+- **AMC Conversion**: Convert completed work orders to AMC customers with auto-service generation
+
+Frontend:
+- CRM Dashboard with pipeline value and funnel stats
+- Leads page with status tracking and filtering
+- Quotations page with line item editor
+- Work Orders page with status management
+- AMC conversion modal
+
+### Frontend Portals
+- Admin Portal: Full dashboard, customers, pools, AMC plans, services, engineers, settings, CRM
+- Engineer Portal: Mobile-first, today's jobs, GPS service execution
+- Customer Portal: Service history, AMC tracking
+
+## CRM Workflow
+1. **Lead Capture** → Create lead with customer details, pool info, requirements
+2. **Quotation** → Create quotation with line items from lead
+3. **Approval** → Send → Approve/Reject quotation
+4. **Work Order** → Create work order from approved quotation
+5. **Execution** → BOQ → Deliveries → Installation
+6. **AMC Conversion** → Convert completed work order to AMC customer
 
 ## Prioritized Backlog
 
@@ -71,6 +84,7 @@ Cloud-based SaaS platform for swimming pool maintenance companies working on AMC
 - [x] Core CRUD operations
 - [x] Service workflow with GPS
 - [x] Multi-portal access
+- [x] Sales CRM module
 
 ### P1 (High Priority - Next Phase)
 - [ ] Cloud storage integration (Google Drive/OneDrive) for photos
@@ -97,6 +111,7 @@ Cloud-based SaaS platform for swimming pool maintenance companies working on AMC
 ## Test Credentials
 - Admin: admin@graandprix.com / admin123
 - Company: Graand Prix Pool Services
+- CRM Enabled: Yes
 
 ## Next Tasks
 1. Add cloud storage integration for proof photos
