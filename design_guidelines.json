@@ -1,0 +1,172 @@
+{
+  "identity": {
+    "name": "E1",
+    "role": "Creative Designer",
+    "mission": "Create a 'Hydro-Technical' aesthetic that fuses the fluidity of water with the precision of engineering.",
+    "principles": [
+      "Fusion over Imitation: Mix water aesthetics with industrial precision.",
+      "Emotion First: Evoke trust, cleanliness, and reliability.",
+      "Content is King: Data and photos are the heroes.",
+      "Zoom In: Focus on details (pH levels, clear water).",
+      "Negative Space: Use white space to represent cleanliness."
+    ]
+  },
+  "typography": {
+    "fonts": {
+      "headings": {
+        "family": "Outfit, sans-serif",
+        "weights": ["500", "700"],
+        "usage": "All section headers, page titles, and modal titles. Use tight tracking (-0.02em)."
+      },
+      "body": {
+        "family": "Public Sans, sans-serif",
+        "weights": ["400", "500", "600"],
+        "usage": "All paragraph text, labels, inputs, and data tables."
+      },
+      "mono": {
+        "family": "JetBrains Mono, monospace",
+        "weights": ["400"],
+        "usage": "Technical data (pH readings, chemical amounts, IDs)."
+      }
+    },
+    "installation": "Import fonts via Google Fonts in index.html or CSS."
+  },
+  "colors": {
+    "palette": {
+      "primary": {
+        "name": "Electric Azure",
+        "hex": "#007AFF",
+        "usage": "Primary buttons, active states, key icons."
+      },
+      "secondary": {
+        "name": "Deep Ocean",
+        "hex": "#0F172A",
+        "usage": "Headings, strong borders, primary text."
+      },
+      "accent": {
+        "name": "Safety Orange",
+        "hex": "#F97316",
+        "usage": "Alerts, 'Action Required' badges, destructive actions."
+      },
+      "neutral": {
+        "light": "#F8FAFC",
+        "dark": "#1E293B"
+      },
+      "success": {
+        "hex": "#10B981",
+        "usage": "Completed jobs, safe chemical levels."
+      }
+    },
+    "theme_strategy": {
+      "mode": "light_preferred",
+      "light": {
+        "background": "#FFFFFF",
+        "foreground": "#0F172A",
+        "card": "#FFFFFF",
+        "card_foreground": "#0F172A",
+        "primary": "#007AFF",
+        "primary_foreground": "#FFFFFF",
+        "muted": "#F1F5F9",
+        "muted_foreground": "#64748B",
+        "border": "#E2E8F0"
+      },
+      "dark": {
+        "background": "#020617",
+        "foreground": "#F8FAFC",
+        "card": "#0F172A",
+        "card_foreground": "#F8FAFC",
+        "primary": "#38BDF8",
+        "primary_foreground": "#0F172A",
+        "muted": "#1E293B",
+        "muted_foreground": "#94A3B8",
+        "border": "#1E293B"
+      }
+    }
+  },
+  "layout": {
+    "spacing": {
+      "base": "0.25rem",
+      "container_padding": "p-6 md:p-8 lg:p-12",
+      "section_gap": "gap-8 md:gap-12"
+    },
+    "grids": {
+      "dashboard": "grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6",
+      "marketing": "grid-cols-1 md:grid-cols-12 gap-8"
+    },
+    "border_radius": {
+      "default": "rounded-lg",
+      "card": "rounded-xl",
+      "button": "rounded-md"
+    }
+  },
+  "visual_enhancers": {
+    "glassmorphism": {
+      "usage": "Sticky headers, modal overlays, floating action buttons.",
+      "classes": "bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-white/20 shadow-sm"
+    },
+    "shadows": {
+      "card": "shadow-[0_2px_8px_rgba(0,0,0,0.08)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)] transition-shadow duration-300",
+      "float": "shadow-[0_12px_32px_rgba(0,122,255,0.25)]"
+    },
+    "textures": {
+      "water_overlay": "Use a subtle noise texture or the water image with low opacity (5%) on the login background."
+    }
+  },
+  "components": {
+    "buttons": {
+      "style": "Solid colors, no gradients. Sharp corners or slightly rounded (rounded-md).",
+      "hover": "Transform -translate-y-0.5 transition-transform duration-200."
+    },
+    "cards": {
+      "style": "Flat white background with subtle border (border-slate-100).",
+      "interaction": "Hover state should lift slightly and darken border."
+    },
+    "inputs": {
+      "style": "bg-slate-50 border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+    },
+    "navigation": {
+      "mobile": "Bottom tab bar for technicians. Large icons (24px+).",
+      "desktop": "Sidebar for Admin. Collapsible."
+    }
+  },
+  "images": {
+    "hero_backgrounds": [
+      {
+        "url": "https://images.unsplash.com/photo-1770387208660-ffc01897fd59?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzV8MHwxfHNlYXJjaHwyfHxtb2Rlcm4lMjBsdXh1cnklMjBzd2ltbWluZyUyMHBvb2x8ZW58MHx8fHwxNzcwNjI5NzE0fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Clear blue water in a modern swimming pool. Use for Login Page background or Customer Portal Hero.",
+        "category": "background"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1763263841338-b701209c1294?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Njl8MHwxfHNlYXJjaHwxfHxjbGVhbiUyMGJsdWUlMjB3YXRlciUyMHRleHR1cmV8ZW58MHx8fHwxNzcwNjI5NzIyfDA&ixlib=rb-4.1.0&q=85",
+        "description": "Abstract swirls of blue and purple with bubbles. Use for decorative cards or empty states.",
+        "category": "texture"
+      }
+    ],
+    "technicians": [
+      {
+        "url": "https://images.unsplash.com/photo-1745570295714-cb18cd15ff64?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1MDZ8MHwxfHNlYXJjaHw0fHxwb29sJTIwdGVjaG5pY2lhbiUyMGNoZWNraW5nJTIwd2F0ZXIlMjBxdWFsaXR5fGVufDB8fHx8MTc3MDYyOTcxN3ww&ixlib=rb-4.1.0&q=85",
+        "description": "Person cleaning filter. Use for 'Service History' or 'Job Details' examples.",
+        "category": "content"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1697779055997-627444414abd?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTV8MHwxfHNlYXJjaHwxfHxzd2ltbWluZyUyMHBvb2wlMjBtYWludGVuYW5jZSUyMHByb2Zlc3Npb25hbHxlbnwwfHx8fDE3NzA2Mjk3MDl8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Pool with life preserver. Use for safety checklists or general maintenance imagery.",
+        "category": "content"
+      }
+    ],
+    "placeholders": {
+      "logo": "https://placehold.co/200x50/007AFF/FFFFFF?text=Graand+Prix",
+      "user_avatar": "https://placehold.co/100x100/0F172A/FFFFFF?text=User"
+    }
+  },
+  "universal_guidelines": [
+    "Do not use generic 'Inter' font for headings.",
+    "Avoid full-screen gradients; use white space and subtle textures.",
+    "Ensure all interactive elements have a hover state.",
+    "Use 'sonner' for toasts.",
+    "All interactive elements MUST have data-testid attributes.",
+    "Mobile-first design for the Engineer Portal is mandatory.",
+    "Use 'lucide-react' for icons."
+  ],
+  "instructions_to_main_agent": "Implement the 'Hydro-Technical' theme. Start by setting up the Tailwind config with the provided colors. Create the layout wrappers for Admin (Sidebar) and Engineer (Mobile Tab Bar). Use the provided images for the login screen and dashboard widgets. Ensure high contrast for outdoor visibility."
+}
