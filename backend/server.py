@@ -1621,7 +1621,7 @@ async def convert_to_amc(data: AMCConversionCreate, user: dict = Depends(require
     if not work_order:
         raise HTTPException(status_code=404, detail="Work order not found")
     
-    if work_order["status"] != WorkOrderStatus.COMPLETED:
+    if work_order["status"] != WorkOrderStatus.READY:
         raise HTTPException(status_code=400, detail="Work order must be completed before AMC conversion")
     
     lead = await db.leads.find_one({"id": work_order["lead_id"]}, {"_id": 0})
