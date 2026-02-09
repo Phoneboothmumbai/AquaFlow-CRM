@@ -133,7 +133,22 @@ export const crmAPI = {
     createWorkOrder: (data) => api.post('/crm/work-orders', data),
     getWorkOrders: (status) => api.get('/crm/work-orders', { params: { status } }),
     getWorkOrder: (id) => api.get(`/crm/work-orders/${id}`),
+    getWorkOrderDetail: (id) => api.get(`/crm/work-orders/${id}/detail`),
     updateWorkOrderStatus: (id, status) => api.put(`/crm/work-orders/${id}/status?status=${status}`),
+    updateWorkOrderStage: (id, stage, notes) => api.put(`/crm/work-orders/${id}/stage?stage=${stage}${notes ? `&notes=${encodeURIComponent(notes)}` : ''}`),
+    
+    // Comments
+    addComment: (workOrderId, message) => api.post(`/crm/work-orders/${workOrderId}/comments`, { work_order_id: workOrderId, message }),
+    getComments: (workOrderId) => api.get(`/crm/work-orders/${workOrderId}/comments`),
+    
+    // Stage History
+    getStageHistory: (workOrderId) => api.get(`/crm/work-orders/${workOrderId}/history`),
+    
+    // Tasks
+    createTask: (data) => api.post('/crm/tasks', data),
+    getTasks: (params) => api.get('/crm/tasks', { params }),
+    updateTask: (id, data) => api.put(`/crm/tasks/${id}`, data),
+    deleteTask: (id) => api.delete(`/crm/tasks/${id}`),
     
     // BOQ
     createBOQItem: (data) => api.post('/crm/boq', data),
