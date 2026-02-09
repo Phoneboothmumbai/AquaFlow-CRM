@@ -309,6 +309,7 @@ async def register(data: UserRegister):
             "id": company_id,
             "name": data.company_name,
             "primary_color": "#007AFF",
+            "crm_enabled": True,  # CRM enabled by default
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.companies.insert_one(company_doc)
