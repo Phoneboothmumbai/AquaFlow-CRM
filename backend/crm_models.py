@@ -54,7 +54,7 @@ class InstallationStatus:
 # Lead Models
 class LeadCreate(BaseModel):
     customer_name: str
-    email: Optional[EmailStr] = None
+    email: Optional[str] = None
     phone: str
     address: Optional[str] = None
     city: Optional[str] = None
@@ -67,7 +67,7 @@ class LeadCreate(BaseModel):
 
 class LeadUpdate(BaseModel):
     customer_name: Optional[str] = None
-    email: Optional[EmailStr] = None
+    email: Optional[str] = None
     phone: Optional[str] = None
     address: Optional[str] = None
     city: Optional[str] = None
