@@ -78,6 +78,7 @@ class CompanyCreate(BaseModel):
     phone: Optional[str] = None
     logo_url: Optional[str] = None
     primary_color: Optional[str] = "#007AFF"
+    crm_enabled: Optional[bool] = False
 
 class CompanyResponse(BaseModel):
     id: str
@@ -86,6 +87,7 @@ class CompanyResponse(BaseModel):
     phone: Optional[str] = None
     logo_url: Optional[str] = None
     primary_color: str = "#007AFF"
+    crm_enabled: bool = False
     created_at: str
 
 # Customer Models
