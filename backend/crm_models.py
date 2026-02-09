@@ -31,8 +31,13 @@ class QuotationStatus:
 
 class WorkOrderStatus:
     PENDING = "pending"
-    IN_PROGRESS = "in_progress"
-    COMPLETED = "completed"
+    BOQ = "boq"
+    PROCUREMENT = "procurement"
+    MATERIAL_DELIVERED = "material_delivered"
+    INSTALLATION = "installation"
+    TESTING = "testing"
+    COMMISSIONING = "commissioning"
+    READY = "ready"
     CONVERTED_TO_AMC = "converted_to_amc"
 
 class DeliveryStatus:
