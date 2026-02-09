@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
+import { companyAPI } from '../../lib/api';
 import {
     LayoutDashboard,
     Users,
@@ -14,7 +15,10 @@ import {
     LogOut,
     Menu,
     X,
-    ChevronLeft
+    ChevronLeft,
+    TrendingUp,
+    Briefcase,
+    Target
 } from 'lucide-react';
 
 const navItems = [
@@ -25,6 +29,13 @@ const navItems = [
     { icon: Calendar, label: 'Services', path: '/admin/services' },
     { icon: Wrench, label: 'Engineers', path: '/admin/engineers' },
     { icon: Settings, label: 'Settings', path: '/admin/settings' },
+];
+
+const crmNavItems = [
+    { icon: TrendingUp, label: 'CRM Dashboard', path: '/admin/crm' },
+    { icon: Users, label: 'Leads', path: '/admin/crm/leads' },
+    { icon: FileText, label: 'Quotations', path: '/admin/crm/quotations' },
+    { icon: Briefcase, label: 'Work Orders', path: '/admin/crm/work-orders' },
 ];
 
 export function AdminLayout({ children }) {
