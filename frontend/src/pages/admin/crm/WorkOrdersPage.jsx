@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AdminLayout } from '../../../components/layout/AdminLayout';
 import { crmAPI, engineerAPI, amcPlanAPI } from '../../../lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
@@ -40,6 +41,7 @@ const statusOptions = [
 ];
 
 export default function WorkOrdersPage() {
+    const navigate = useNavigate();
     const [workOrders, setWorkOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [statusFilter, setStatusFilter] = useState('all');
@@ -252,7 +254,8 @@ export default function WorkOrdersPage() {
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
-                                                onClick={() => { setSelectedOrder(order); setShowDetailModal(true); }}
+                                                onClick={() => navigate(`/admin/crm/work-orders/${order.id}`)}
+                                                data-testid={`view-wo-${order.id}`}
                                             >
                                                 <Eye className="h-4 w-4" />
                                             </Button>
