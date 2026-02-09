@@ -1597,7 +1597,7 @@ async def update_installation(installation_id: str, data: InstallationUpdate, us
         if installation:
             await db.work_orders.update_one(
                 {"id": installation["work_order_id"]},
-                {"$set": {"status": WorkOrderStatus.COMPLETED, "actual_end_date": datetime.now(timezone.utc).strftime("%Y-%m-%d")}}
+                {"$set": {"status": WorkOrderStatus.READY, "actual_end_date": datetime.now(timezone.utc).strftime("%Y-%m-%d")}}
             )
     
     installation = await db.installations.find_one({"id": installation_id}, {"_id": 0})
