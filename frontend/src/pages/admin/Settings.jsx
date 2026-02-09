@@ -19,7 +19,8 @@ export default function SettingsPage() {
         address: '',
         phone: '',
         logo_url: '',
-        primary_color: '#007AFF'
+        primary_color: '#007AFF',
+        crm_enabled: false
     });
 
     useEffect(() => {
