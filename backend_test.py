@@ -311,6 +311,181 @@ class PoolMaintenanceAPITester:
         """Test customer getting their AMC contracts"""
         return self.run_test("Customer Get AMCs", "GET", "customer/amcs", 200, token=self.customer_token)
 
+    # ==================== CRM MODULE TESTS ====================
+    
+    def test_enable_crm_module(self):
+        """Test enabling CRM module in company settings"""
+        company_data = {
+            "name": "Graand Prix Pool Services",
+            "crm_enabled": True
+        }
+        return self.run_test("Enable CRM Module", "PUT", "company", 200, company_data, self.admin_token)
+
+    def test_create_lead(self):
+        """Test creating a new lead"""
+        lead_data = {
+            "customer_name": "Sarah Wilson",
+            "email": "sarah.wilson@example.com",
+            "phone": "+91-9876543213",
+            "address": "456 Pool Avenue, Swimming Town",
+            "city": "Swimming Town",
+            "pool_type": "residential",
+            "pool_size": "25x50 ft",
+            "requirement": "New pool installation with heating system",
+            "source": "website",
+            "notes": "Interested in premium package with automation"
+        }
+        success, response = self.run_test("Create Lead", "POST", "crm/leads", 200, lead_data, self.admin_token)
+        if success and 'id' in response:
+            self.created_entities['lead_id'] = response['id']
+            print(f"   Lead created with ID: {self.created_entities['lead_id']}")
+        return success
+
+    def test_get_leads(self):
+        """Test getting all leads"""
+        return self.run_test("Get Leads", "GET", "crm/leads", 200, token=self.admin_token)
+
+    def test_update_lead_status(self):
+        """Test updating lead status"""
+        if not self.created_entities.get('lead_id'):
+            print("❌ Cannot update lead - no lead ID available")
+            return False
+            
+        update_data = {
+            "status": "qualified",
+            "notes": "Customer confirmed budget and timeline"
+        }
+        return self.run_test("Update Lead Status", "PUT", f"crm/leads/{self.created_entities['lead_id']}", 200, update_data, self.admin_token)
+
+    def test_create_quotation(self):
+        """Test creating quotation from lead"""
+        if not self.created_entities.get('lead_id'):
+            print("❌ Cannot create quotation - no lead ID available")
+            return False
+            
+        quotation_data = {
+            "lead_id": self.created_entities['lead_id'],
+            "title": "Premium Pool Installation Package",
+            "items": [
+                {
+                    "description": "Pool excavation and construction",
+                    "quantity": 1,
+                    "unit": "nos",
+                    "unit_price": 150000,
+                    "amount": 150000
+                },
+                {
+                    "description": "Pool heating system installation",
+                    "quantity": 1,
+                    "unit": "nos", 
+                    "unit_price": 75000,
+                    "amount": 75000
+                },
+                {
+                    "description": "Pool automation system",
+                    "quantity": 1,
+                    "unit": "nos",
+                    "unit_price": 50000,
+                    "amount": 50000
+                }
+            ],
+            "tax_percent": 18.0,
+            "validity_days": 30,
+            "terms": "50% advance, 30% on completion, 20% after 30 days",
+            "notes": "Includes 1 year warranty on all equipment"
+        }
+        success, response = self.run_test("Create Quotation", "POST", "crm/quotations", 200, quotation_data, self.admin_token)
+        if success and 'id' in response:
+            self.created_entities['quotation_id'] = response['id']
+            print(f"   Quotation created with ID: {self.created_entities['quotation_id']}")
+            print(f"   Quotation Number: {response.get('quotation_number')}")
+            print(f"   Total Amount: ₹{response.get('total', 0):,.2f}")
+        return success
+
+    def test_get_quotations(self):
+        """Test getting all quotations"""
+        return self.run_test("Get Quotations", "GET", "crm/quotations", 200, token=self.admin_token)
+
+    def test_send_quotation(self):
+        """Test sending quotation (update status to sent)"""
+        if not self.created_entities.get('quotation_id'):
+            print("❌ Cannot send quotation - no quotation ID available")
+            return False
+            
+        return self.run_test("Send Quotation", "PUT", f"crm/quotations/{self.created_entities['quotation_id']}/status?status=sent", 200, token=self.admin_token)
+
+    def test_approve_quotation(self):
+        """Test approving quotation"""
+        if not self.created_entities.get('quotation_id'):
+            print("❌ Cannot approve quotation - no quotation ID available")
+            return False
+            
+        return self.run_test("Approve Quotation", "PUT", f"crm/quotations/{self.created_entities['quotation_id']}/status?status=approved", 200, token=self.admin_token)
+
+    def test_create_work_order(self):
+        """Test creating work order from approved quotation"""
+        if not self.created_entities.get('quotation_id'):
+            print("❌ Cannot create work order - no quotation ID available")
+            return False
+            
+        work_order_data = {
+            "quotation_id": self.created_entities['quotation_id'],
+            "scope_of_work": "Complete pool installation including excavation, construction, heating system, and automation setup",
+            "expected_start_date": (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d"),
+            "expected_end_date": (datetime.now() + timedelta(days=45)).strftime("%Y-%m-%d"),
+            "notes": "Coordinate with customer for site access and utility connections"
+        }
+        success, response = self.run_test("Create Work Order", "POST", "crm/work-orders", 200, work_order_data, self.admin_token)
+        if success and 'id' in response:
+            self.created_entities['work_order_id'] = response['id']
+            print(f"   Work Order created with ID: {self.created_entities['work_order_id']}")
+            print(f"   Work Order Number: {response.get('work_order_number')}")
+        return success
+
+    def test_get_work_orders(self):
+        """Test getting all work orders"""
+        return self.run_test("Get Work Orders", "GET", "crm/work-orders", 200, token=self.admin_token)
+
+    def test_start_work_order(self):
+        """Test starting work order"""
+        if not self.created_entities.get('work_order_id'):
+            print("❌ Cannot start work order - no work order ID available")
+            return False
+            
+        return self.run_test("Start Work Order", "PUT", f"crm/work-orders/{self.created_entities['work_order_id']}/status?status=in_progress", 200, token=self.admin_token)
+
+    def test_complete_work_order(self):
+        """Test completing work order"""
+        if not self.created_entities.get('work_order_id'):
+            print("❌ Cannot complete work order - no work order ID available")
+            return False
+            
+        return self.run_test("Complete Work Order", "PUT", f"crm/work-orders/{self.created_entities['work_order_id']}/status?status=completed", 200, token=self.admin_token)
+
+    def test_convert_work_order_to_amc(self):
+        """Test converting completed work order to AMC"""
+        if not all([self.created_entities.get('work_order_id'), self.created_entities.get('amc_plan_id')]):
+            print("❌ Cannot convert to AMC - missing work order or AMC plan ID")
+            return False
+            
+        conversion_data = {
+            "work_order_id": self.created_entities['work_order_id'],
+            "amc_plan_id": self.created_entities['amc_plan_id'],
+            "start_date": (datetime.now() + timedelta(days=50)).strftime("%Y-%m-%d"),
+            "end_date": (datetime.now() + timedelta(days=415)).strftime("%Y-%m-%d"),
+            "assigned_engineer_id": self.created_entities.get('engineer_id')
+        }
+        success, response = self.run_test("Convert Work Order to AMC", "POST", "crm/convert-to-amc", 200, conversion_data, self.admin_token)
+        if success:
+            print(f"   Work Order converted to AMC successfully!")
+            if 'services_created' in response:
+                print(f"   Services created: {response['services_created']}")
+        return success
+
+    def test_crm_dashboard_stats(self):
+        """Test CRM dashboard statistics"""
+        return self.run_test("CRM Dashboard Stats", "GET", "crm/dashboard", 200, token=self.admin_token)
+
 def main():
     print("🏊‍♂️ Starting Swimming Pool Maintenance SaaS API Tests")
     print("=" * 60)
