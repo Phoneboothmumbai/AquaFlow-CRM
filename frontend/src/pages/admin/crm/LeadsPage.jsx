@@ -184,14 +184,14 @@ export default function LeadsPage() {
                         <h1 className="text-2xl md:text-3xl font-heading font-bold">Leads</h1>
                         <p className="text-muted-foreground">Manage your sales pipeline</p>
                     </div>
-                    <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+                    <Dialog open={showAddModal} onOpenChange={(open) => { if (!saving) setShowAddModal(open); }}>
                         <DialogTrigger asChild>
                             <Button data-testid="add-lead-btn">
                                 <Plus className="h-4 w-4 mr-2" />
                                 Add Lead
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+                        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto" onPointerDownOutside={(e) => { if (saving) e.preventDefault(); }}>
                             <DialogHeader>
                                 <DialogTitle>Add New Lead</DialogTitle>
                             </DialogHeader>
