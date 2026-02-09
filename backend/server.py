@@ -1050,6 +1050,740 @@ async def get_dashboard_stats(user: dict = Depends(require_company_admin)):
         "pending_services": pending_services
     }
 
+# ==================== CRM MODULE ENDPOINTS ====================
+
+from crm_models import (
+    LeadCreate, LeadUpdate, LeadResponse, LeadStatus,
+    QuotationCreate, QuotationResponse, QuotationLineItem, QuotationStatus,
+    WorkOrderCreate, WorkOrderResponse, WorkOrderStatus,
+    BOQItemCreate, BOQItemResponse,
+    DeliveryCreate, DeliveryResponse, DeliveryStatus,
+    InstallationCreate, InstallationUpdate, InstallationResponse, InstallationStatus,
+    AMCConversionCreate
+)
+
+# Helper to check if CRM is enabled for company
+async def check_crm_enabled(user: dict):
+    company = await db.companies.find_one({"id": user["company_id"]}, {"_id": 0})
+    if not company or not company.get("crm_enabled", False):
+        raise HTTPException(status_code=403, detail="CRM module not enabled for your company")
+    return True
+
+# --- LEADS ---
+
+@api_router.post("/crm/leads", response_model=LeadResponse)
+async def create_lead(data: LeadCreate, user: dict = Depends(require_company_admin)):
+    await check_crm_enabled(user)
+    
+    lead_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    lead_doc = {
+        "id": lead_id,
+        "company_id": user["company_id"],
+        **data.model_dump(),
+        "status": LeadStatus.NEW,
+        "created_at": now,
+        "updated_at": now
+    }
+    await db.leads.insert_one(lead_doc)
+    
+    return LeadResponse(**lead_doc)
+
+@api_router.get("/crm/leads", response_model=List[LeadResponse])
+async def get_leads(status: Optional[str] = None, user: dict = Depends(require_company_admin)):
+    await check_crm_enabled(user)
+    
+    query = {"company_id": user["company_id"]}
+    if status:
+        query["status"] = status
+    
+    leads = await db.leads.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    
+    result = []
+    for lead in leads:
+        assigned_to_name = None
+        if lead.get("assigned_to"):
+            assigned_user = await db.users.find_one({"id": lead["assigned_to"]}, {"_id": 0})
+            if assigned_user:
+                assigned_to_name = assigned_user["name"]
+        result.append(LeadResponse(**lead, assigned_to_name=assigned_to_name))
+    
+    return result
+
+@api_router.get("/crm/leads/{lead_id}", response_model=LeadResponse)
+async def get_lead(lead_id: str, user: dict = Depends(require_company_admin)):
+    await check_crm_enabled(user)
+    
+    lead = await db.leads.find_one({"id": lead_id, "company_id": user["company_id"]}, {"_id": 0})
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    
+    assigned_to_name = None
+    if lead.get("assigned_to"):
+        assigned_user = await db.users.find_one({"id": lead["assigned_to"]}, {"_id": 0})
+        if assigned_user:
+            assigned_to_name = assigned_user["name"]
+    
+    return LeadResponse(**lead, assigned_to_name=assigned_to_name)
+
+@api_router.put("/crm/leads/{lead_id}", response_model=LeadResponse)
+async def update_lead(lead_id: str, data: LeadUpdate, user: dict = Depends(require_company_admin)):
+    await check_crm_enabled(user)
+    
+    update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.leads.update_one(
+        {"id": lead_id, "company_id": user["company_id"]},
+        {"$set": update_data}
+    )
+    
+    return await get_lead(lead_id, user)
+
+@api_router.delete("/crm/leads/{lead_id}")
+async def delete_lead(lead_id: str, user: dict = Depends(require_company_admin)):
+    await check_crm_enabled(user)
+    
+    result = await db.leads.delete_one({"id": lead_id, "company_id": user["company_id"]})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    return {"message": "Lead deleted"}
+
+# --- QUOTATIONS ---
+
+@api_router.post("/crm/quotations", response_model=QuotationResponse)
+async def create_quotation(data: QuotationCreate, user: dict = Depends(require_company_admin)):
+    await check_crm_enabled(user)
+    
+    # Verify lead exists
+    lead = await db.leads.find_one({"id": data.lead_id, "company_id": user["company_id"]}, {"_id": 0})
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    
+    # Generate quotation number
+    count = await db.quotations.count_documents({"company_id": user["company_id"]})
+    quotation_number = f"QT-{count + 1:05d}"
+    
+    # Calculate totals
+    items = [item.model_dump() for item in data.items]
+    subtotal = sum(item["amount"] for item in items)
+    tax_amount = subtotal * (data.tax_percent / 100)
+    total = subtotal + tax_amount
+    
+    now = datetime.now(timezone.utc)
+    valid_until = (now + timedelta(days=data.validity_days)).strftime("%Y-%m-%d")
+    
+    quotation_id = str(uuid.uuid4())
+    quotation_doc = {
+        "id": quotation_id,
+        "company_id": user["company_id"],
+        "lead_id": data.lead_id,
+        "quotation_number": quotation_number,
+        "title": data.title,
+        "items": items,
+        "subtotal": subtotal,
+        "tax_percent": data.tax_percent,
+        "tax_amount": tax_amount,
+        "total": total,
+        "validity_days": data.validity_days,
+        "valid_until": valid_until,
+        "terms": data.terms,
+        "notes": data.notes,
+        "status": QuotationStatus.DRAFT,
+        "revision": 1,
+        "created_at": now.isoformat(),
+        "updated_at": now.isoformat()
+    }
+    await db.quotations.insert_one(quotation_doc)
+    
+    # Update lead status
+    await db.leads.update_one(
+        {"id": data.lead_id},
+        {"$set": {"status": LeadStatus.PROPOSAL_SENT, "updated_at": now.isoformat()}}
+    )
+    
+    return QuotationResponse(**quotation_doc, lead_name=lead["customer_name"])
+
+@api_router.get("/crm/quotations", response_model=List[QuotationResponse])
+async def get_quotations(lead_id: Optional[str] = None, status: Optional[str] = None, user: dict = Depends(require_company_admin)):
+    await check_crm_enabled(user)
+    
+    query = {"company_id": user["company_id"]}
+    if lead_id:
+        query["lead_id"] = lead_id
+    if status:
+        query["status"] = status
+    
+    quotations = await db.quotations.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    
+    result = []
+    for q in quotations:
+        lead = await db.leads.find_one({"id": q["lead_id"]}, {"_id": 0})
+        result.append(QuotationResponse(**q, lead_name=lead["customer_name"] if lead else None))
+    
+    return result
+
+@api_router.get("/crm/quotations/{quotation_id}", response_model=QuotationResponse)
+async def get_quotation(quotation_id: str, user: dict = Depends(require_company_admin)):
+    await check_crm_enabled(user)
+    
+    quotation = await db.quotations.find_one({"id": quotation_id, "company_id": user["company_id"]}, {"_id": 0})
+    if not quotation:
+        raise HTTPException(status_code=404, detail="Quotation not found")
+    
+    lead = await db.leads.find_one({"id": quotation["lead_id"]}, {"_id": 0})
+    return QuotationResponse(**quotation, lead_name=lead["customer_name"] if lead else None)
+
+@api_router.put("/crm/quotations/{quotation_id}/status")
+async def update_quotation_status(quotation_id: str, status: str, user: dict = Depends(require_company_admin)):
+    await check_crm_enabled(user)
+    
+    await db.quotations.update_one(
+        {"id": quotation_id, "company_id": user["company_id"]},
+        {"$set": {"status": status, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    # Update lead status based on quotation status
+    quotation = await db.quotations.find_one({"id": quotation_id}, {"_id": 0})
+    if quotation:
+        if status == QuotationStatus.APPROVED:
+            await db.leads.update_one(
+                {"id": quotation["lead_id"]},
+                {"$set": {"status": LeadStatus.WON, "updated_at": datetime.now(timezone.utc).isoformat()}}
+            )
+        elif status == QuotationStatus.REJECTED:
+            await db.leads.update_one(
+                {"id": quotation["lead_id"]},
+                {"$set": {"status": LeadStatus.LOST, "updated_at": datetime.now(timezone.utc).isoformat()}}
+            )
+    
+    return {"message": "Status updated"}
+
+@api_router.post("/crm/quotations/{quotation_id}/revise", response_model=QuotationResponse)
+async def revise_quotation(quotation_id: str, data: QuotationCreate, user: dict = Depends(require_company_admin)):
+    await check_crm_enabled(user)
+    
+    # Get existing quotation
+    existing = await db.quotations.find_one({"id": quotation_id, "company_id": user["company_id"]}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Quotation not found")
+    
+    # Mark old as revised
+    await db.quotations.update_one(
+        {"id": quotation_id},
+        {"$set": {"status": QuotationStatus.REVISED, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    # Create new revision
+    items = [item.model_dump() for item in data.items]
+    subtotal = sum(item["amount"] for item in items)
+    tax_amount = subtotal * (data.tax_percent / 100)
+    total = subtotal + tax_amount
+    
+    now = datetime.now(timezone.utc)
+    valid_until = (now + timedelta(days=data.validity_days)).strftime("%Y-%m-%d")
+    
+    new_quotation_id = str(uuid.uuid4())
+    quotation_doc = {
+        "id": new_quotation_id,
+        "company_id": user["company_id"],
+        "lead_id": data.lead_id,
+        "quotation_number": f"{existing['quotation_number']}-R{existing['revision'] + 1}",
+        "title": data.title,
+        "items": items,
+        "subtotal": subtotal,
+        "tax_percent": data.tax_percent,
+        "tax_amount": tax_amount,
+        "total": total,
+        "validity_days": data.validity_days,
+        "valid_until": valid_until,
+        "terms": data.terms,
+        "notes": data.notes,
+        "status": QuotationStatus.DRAFT,
+        "revision": existing["revision"] + 1,
+        "parent_quotation_id": quotation_id,
+        "created_at": now.isoformat(),
+        "updated_at": now.isoformat()
+    }
+    await db.quotations.insert_one(quotation_doc)
+    
+    lead = await db.leads.find_one({"id": data.lead_id}, {"_id": 0})
+    return QuotationResponse(**quotation_doc, lead_name=lead["customer_name"] if lead else None)
+
+# --- WORK ORDERS ---
+
+@api_router.post("/crm/work-orders", response_model=WorkOrderResponse)
+async def create_work_order(data: WorkOrderCreate, user: dict = Depends(require_company_admin)):
+    await check_crm_enabled(user)
+    
+    # Verify quotation exists and is approved
+    quotation = await db.quotations.find_one({"id": data.quotation_id, "company_id": user["company_id"]}, {"_id": 0})
+    if not quotation:
+        raise HTTPException(status_code=404, detail="Quotation not found")
+    if quotation["status"] != QuotationStatus.APPROVED:
+        raise HTTPException(status_code=400, detail="Quotation must be approved to create work order")
+    
+    # Generate work order number
+    count = await db.work_orders.count_documents({"company_id": user["company_id"]})
+    work_order_number = f"WO-{count + 1:05d}"
+    
+    now = datetime.now(timezone.utc).isoformat()
+    work_order_id = str(uuid.uuid4())
+    
+    work_order_doc = {
+        "id": work_order_id,
+        "company_id": user["company_id"],
+        "lead_id": quotation["lead_id"],
+        "quotation_id": data.quotation_id,
+        "work_order_number": work_order_number,
+        "scope_of_work": data.scope_of_work,
+        "expected_start_date": data.expected_start_date,
+        "expected_end_date": data.expected_end_date,
+        "status": WorkOrderStatus.PENDING,
+        "notes": data.notes,
+        "created_at": now,
+        "updated_at": now
+    }
+    await db.work_orders.insert_one(work_order_doc)
+    
+    lead = await db.leads.find_one({"id": quotation["lead_id"]}, {"_id": 0})
+    return WorkOrderResponse(**work_order_doc, lead_name=lead["customer_name"] if lead else None, quotation_total=quotation["total"])
+
+@api_router.get("/crm/work-orders", response_model=List[WorkOrderResponse])
+async def get_work_orders(status: Optional[str] = None, user: dict = Depends(require_company_admin)):
+    await check_crm_enabled(user)
+    
+    query = {"company_id": user["company_id"]}
+    if status:
+        query["status"] = status
+    
+    work_orders = await db.work_orders.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    
+    result = []
+    for wo in work_orders:
+        lead = await db.leads.find_one({"id": wo["lead_id"]}, {"_id": 0})
+        quotation = await db.quotations.find_one({"id": wo["quotation_id"]}, {"_id": 0})
+        result.append(WorkOrderResponse(
+            **wo,
+            lead_name=lead["customer_name"] if lead else None,
+            quotation_total=quotation["total"] if quotation else None
+        ))
+    
+    return result
+
+@api_router.get("/crm/work-orders/{work_order_id}", response_model=WorkOrderResponse)
+async def get_work_order(work_order_id: str, user: dict = Depends(require_company_admin)):
+    await check_crm_enabled(user)
+    
+    work_order = await db.work_orders.find_one({"id": work_order_id, "company_id": user["company_id"]}, {"_id": 0})
+    if not work_order:
+        raise HTTPException(status_code=404, detail="Work order not found")
+    
+    lead = await db.leads.find_one({"id": work_order["lead_id"]}, {"_id": 0})
+    quotation = await db.quotations.find_one({"id": work_order["quotation_id"]}, {"_id": 0})
+    
+    return WorkOrderResponse(
+        **work_order,
+        lead_name=lead["customer_name"] if lead else None,
+        quotation_total=quotation["total"] if quotation else None
+    )
+
+@api_router.put("/crm/work-orders/{work_order_id}/status")
+async def update_work_order_status(work_order_id: str, status: str, user: dict = Depends(require_company_admin)):
+    await check_crm_enabled(user)
+    
+    update_data = {"status": status, "updated_at": datetime.now(timezone.utc).isoformat()}
+    
+    if status == WorkOrderStatus.IN_PROGRESS:
+        update_data["actual_start_date"] = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    elif status == WorkOrderStatus.COMPLETED:
+        update_data["actual_end_date"] = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    
+    await db.work_orders.update_one(
+        {"id": work_order_id, "company_id": user["company_id"]},
+        {"$set": update_data}
+    )
+    
+    return {"message": "Status updated"}
+
+# --- BOQ (Bill of Quantity) ---
+
+@api_router.post("/crm/boq", response_model=BOQItemResponse)
+async def create_boq_item(data: BOQItemCreate, user: dict = Depends(require_company_admin)):
+    await check_crm_enabled(user)
+    
+    # Verify work order exists
+    work_order = await db.work_orders.find_one({"id": data.work_order_id, "company_id": user["company_id"]}, {"_id": 0})
+    if not work_order:
+        raise HTTPException(status_code=404, detail="Work order not found")
+    
+    boq_id = str(uuid.uuid4())
+    boq_doc = {
+        "id": boq_id,
+        "company_id": user["company_id"],
+        **data.model_dump(),
+        "ordered_quantity": 0,
+        "delivered_quantity": 0,
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.boq_items.insert_one(boq_doc)
+    
+    return BOQItemResponse(**boq_doc)
+
+@api_router.get("/crm/boq", response_model=List[BOQItemResponse])
+async def get_boq_items(work_order_id: str, user: dict = Depends(require_company_admin)):
+    await check_crm_enabled(user)
+    
+    items = await db.boq_items.find({"work_order_id": work_order_id, "company_id": user["company_id"]}, {"_id": 0}).to_list(1000)
+    return [BOQItemResponse(**item) for item in items]
+
+@api_router.delete("/crm/boq/{boq_id}")
+async def delete_boq_item(boq_id: str, user: dict = Depends(require_company_admin)):
+    await check_crm_enabled(user)
+    
+    result = await db.boq_items.delete_one({"id": boq_id, "company_id": user["company_id"]})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="BOQ item not found")
+    return {"message": "BOQ item deleted"}
+
+# --- DELIVERIES ---
+
+@api_router.post("/crm/deliveries", response_model=DeliveryResponse)
+async def create_delivery(data: DeliveryCreate, user: dict = Depends(require_company_admin)):
+    await check_crm_enabled(user)
+    
+    # Update BOQ item
+    await db.boq_items.update_one(
+        {"id": data.boq_item_id, "company_id": user["company_id"]},
+        {"$inc": {"ordered_quantity": data.quantity}, "$set": {"status": "ordered"}}
+    )
+    
+    delivery_id = str(uuid.uuid4())
+    delivery_doc = {
+        "id": delivery_id,
+        "company_id": user["company_id"],
+        **data.model_dump(),
+        "status": DeliveryStatus.ORDERED,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.deliveries.insert_one(delivery_doc)
+    
+    boq = await db.boq_items.find_one({"id": data.boq_item_id}, {"_id": 0})
+    return DeliveryResponse(**delivery_doc, item_name=boq["item_name"] if boq else None)
+
+@api_router.get("/crm/deliveries", response_model=List[DeliveryResponse])
+async def get_deliveries(work_order_id: str, user: dict = Depends(require_company_admin)):
+    await check_crm_enabled(user)
+    
+    deliveries = await db.deliveries.find({"work_order_id": work_order_id, "company_id": user["company_id"]}, {"_id": 0}).to_list(1000)
+    
+    result = []
+    for d in deliveries:
+        boq = await db.boq_items.find_one({"id": d["boq_item_id"]}, {"_id": 0})
+        result.append(DeliveryResponse(**d, item_name=boq["item_name"] if boq else None))
+    
+    return result
+
+@api_router.put("/crm/deliveries/{delivery_id}/status")
+async def update_delivery_status(delivery_id: str, status: str, user: dict = Depends(require_company_admin)):
+    await check_crm_enabled(user)
+    
+    update_data = {"status": status}
+    if status == DeliveryStatus.DELIVERED:
+        update_data["actual_date"] = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        
+        # Update BOQ delivered quantity
+        delivery = await db.deliveries.find_one({"id": delivery_id}, {"_id": 0})
+        if delivery:
+            await db.boq_items.update_one(
+                {"id": delivery["boq_item_id"]},
+                {"$inc": {"delivered_quantity": delivery["quantity"]}}
+            )
+    
+    await db.deliveries.update_one(
+        {"id": delivery_id, "company_id": user["company_id"]},
+        {"$set": update_data}
+    )
+    
+    return {"message": "Delivery status updated"}
+
+# --- INSTALLATIONS ---
+
+@api_router.post("/crm/installations", response_model=InstallationResponse)
+async def create_installation(data: InstallationCreate, user: dict = Depends(require_company_admin)):
+    await check_crm_enabled(user)
+    
+    # Verify work order and engineer exist
+    work_order = await db.work_orders.find_one({"id": data.work_order_id, "company_id": user["company_id"]}, {"_id": 0})
+    if not work_order:
+        raise HTTPException(status_code=404, detail="Work order not found")
+    
+    engineer = await db.engineers.find_one({"id": data.assigned_engineer_id, "company_id": user["company_id"]}, {"_id": 0})
+    if not engineer:
+        raise HTTPException(status_code=404, detail="Engineer not found")
+    
+    installation_id = str(uuid.uuid4())
+    installation_doc = {
+        "id": installation_id,
+        "company_id": user["company_id"],
+        **data.model_dump(),
+        "status": InstallationStatus.SCHEDULED,
+        "photos": [],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.installations.insert_one(installation_doc)
+    
+    return InstallationResponse(
+        **installation_doc,
+        engineer_name=engineer["name"],
+        work_order_number=work_order["work_order_number"]
+    )
+
+@api_router.get("/crm/installations", response_model=List[InstallationResponse])
+async def get_installations(work_order_id: Optional[str] = None, user: dict = Depends(require_company_admin)):
+    await check_crm_enabled(user)
+    
+    query = {"company_id": user["company_id"]}
+    if work_order_id:
+        query["work_order_id"] = work_order_id
+    
+    installations = await db.installations.find(query, {"_id": 0}).to_list(1000)
+    
+    result = []
+    for inst in installations:
+        engineer = await db.engineers.find_one({"id": inst["assigned_engineer_id"]}, {"_id": 0})
+        work_order = await db.work_orders.find_one({"id": inst["work_order_id"]}, {"_id": 0})
+        result.append(InstallationResponse(
+            **inst,
+            engineer_name=engineer["name"] if engineer else None,
+            work_order_number=work_order["work_order_number"] if work_order else None
+        ))
+    
+    return result
+
+@api_router.put("/crm/installations/{installation_id}", response_model=InstallationResponse)
+async def update_installation(installation_id: str, data: InstallationUpdate, user: dict = Depends(require_company_admin)):
+    await check_crm_enabled(user)
+    
+    update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+    
+    await db.installations.update_one(
+        {"id": installation_id, "company_id": user["company_id"]},
+        {"$set": update_data}
+    )
+    
+    # If installation completed, update work order
+    if data.status == InstallationStatus.COMPLETED:
+        installation = await db.installations.find_one({"id": installation_id}, {"_id": 0})
+        if installation:
+            await db.work_orders.update_one(
+                {"id": installation["work_order_id"]},
+                {"$set": {"status": WorkOrderStatus.COMPLETED, "actual_end_date": datetime.now(timezone.utc).strftime("%Y-%m-%d")}}
+            )
+    
+    installation = await db.installations.find_one({"id": installation_id}, {"_id": 0})
+    engineer = await db.engineers.find_one({"id": installation["assigned_engineer_id"]}, {"_id": 0})
+    work_order = await db.work_orders.find_one({"id": installation["work_order_id"]}, {"_id": 0})
+    
+    return InstallationResponse(
+        **installation,
+        engineer_name=engineer["name"] if engineer else None,
+        work_order_number=work_order["work_order_number"] if work_order else None
+    )
+
+# --- AMC CONVERSION ---
+
+@api_router.post("/crm/convert-to-amc")
+async def convert_to_amc(data: AMCConversionCreate, user: dict = Depends(require_company_admin)):
+    await check_crm_enabled(user)
+    
+    # Get work order and lead info
+    work_order = await db.work_orders.find_one({"id": data.work_order_id, "company_id": user["company_id"]}, {"_id": 0})
+    if not work_order:
+        raise HTTPException(status_code=404, detail="Work order not found")
+    
+    if work_order["status"] != WorkOrderStatus.COMPLETED:
+        raise HTTPException(status_code=400, detail="Work order must be completed before AMC conversion")
+    
+    lead = await db.leads.find_one({"id": work_order["lead_id"]}, {"_id": 0})
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    
+    # Create customer from lead if not existing
+    customer_id = lead.get("existing_customer_id")
+    if not customer_id:
+        customer_id = str(uuid.uuid4())
+        customer_doc = {
+            "id": customer_id,
+            "company_id": user["company_id"],
+            "name": lead["customer_name"],
+            "email": lead.get("email", ""),
+            "phone": lead["phone"],
+            "address": lead.get("address", ""),
+            "city": lead.get("city"),
+            "notes": f"Converted from Lead. Work Order: {work_order['work_order_number']}",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.customers.insert_one(customer_doc)
+        
+        # Create customer user account
+        if lead.get("email"):
+            customer_user_id = str(uuid.uuid4())
+            customer_user = {
+                "id": customer_user_id,
+                "email": lead["email"],
+                "password": hash_password(lead["phone"][-6:]),
+                "name": lead["customer_name"],
+                "role": UserRole.CUSTOMER,
+                "company_id": user["company_id"],
+                "customer_id": customer_id,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            try:
+                await db.users.insert_one(customer_user)
+            except:
+                pass
+    
+    # Create pool from lead info
+    pool_id = str(uuid.uuid4())
+    pool_doc = {
+        "id": pool_id,
+        "company_id": user["company_id"],
+        "customer_id": customer_id,
+        "name": "Main Pool",
+        "pool_type": lead.get("pool_type", "residential"),
+        "size": lead.get("pool_size"),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.pools.insert_one(pool_doc)
+    
+    # Get AMC plan
+    plan = await db.amc_plans.find_one({"id": data.amc_plan_id, "company_id": user["company_id"]}, {"_id": 0})
+    if not plan:
+        raise HTTPException(status_code=404, detail="AMC Plan not found")
+    
+    # Create AMC assignment
+    assignment_id = str(uuid.uuid4())
+    assignment_doc = {
+        "id": assignment_id,
+        "company_id": user["company_id"],
+        "customer_id": customer_id,
+        "pool_id": pool_id,
+        "amc_plan_id": data.amc_plan_id,
+        "start_date": data.start_date,
+        "end_date": data.end_date,
+        "assigned_engineer_id": data.assigned_engineer_id,
+        "status": "active",
+        "source_work_order_id": data.work_order_id,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.amc_assignments.insert_one(assignment_doc)
+    
+    # Generate services
+    from dateutil.rrule import rrule, WEEKLY, MONTHLY
+    
+    start = datetime.fromisoformat(data.start_date)
+    end = datetime.fromisoformat(data.end_date)
+    
+    if plan["frequency"] == "weekly":
+        dates = list(rrule(WEEKLY, dtstart=start, until=end))
+    elif plan["frequency"] == "biweekly":
+        dates = list(rrule(WEEKLY, interval=2, dtstart=start, until=end))
+    else:
+        dates = list(rrule(MONTHLY, dtstart=start, until=end))
+    
+    services = []
+    for date in dates:
+        service_id = str(uuid.uuid4())
+        service_doc = {
+            "id": service_id,
+            "company_id": user["company_id"],
+            "amc_assignment_id": assignment_id,
+            "customer_id": customer_id,
+            "pool_id": pool_id,
+            "scheduled_date": date.strftime("%Y-%m-%d"),
+            "engineer_id": data.assigned_engineer_id,
+            "status": "scheduled",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        services.append(service_doc)
+    
+    if services:
+        await db.services.insert_many(services)
+    
+    # Update work order status
+    await db.work_orders.update_one(
+        {"id": data.work_order_id},
+        {"$set": {"status": WorkOrderStatus.CONVERTED_TO_AMC, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {
+        "message": "Successfully converted to AMC",
+        "customer_id": customer_id,
+        "pool_id": pool_id,
+        "amc_assignment_id": assignment_id,
+        "services_created": len(services)
+    }
+
+# --- CRM DASHBOARD ---
+
+@api_router.get("/crm/dashboard")
+async def get_crm_dashboard(user: dict = Depends(require_company_admin)):
+    await check_crm_enabled(user)
+    
+    company_id = user["company_id"]
+    
+    # Lead stats
+    total_leads = await db.leads.count_documents({"company_id": company_id})
+    new_leads = await db.leads.count_documents({"company_id": company_id, "status": LeadStatus.NEW})
+    qualified_leads = await db.leads.count_documents({"company_id": company_id, "status": LeadStatus.QUALIFIED})
+    won_leads = await db.leads.count_documents({"company_id": company_id, "status": LeadStatus.WON})
+    lost_leads = await db.leads.count_documents({"company_id": company_id, "status": LeadStatus.LOST})
+    
+    # Quotation stats
+    total_quotations = await db.quotations.count_documents({"company_id": company_id})
+    pending_quotations = await db.quotations.count_documents({"company_id": company_id, "status": {"$in": [QuotationStatus.DRAFT, QuotationStatus.SENT]}})
+    approved_quotations = await db.quotations.count_documents({"company_id": company_id, "status": QuotationStatus.APPROVED})
+    
+    # Work order stats
+    total_work_orders = await db.work_orders.count_documents({"company_id": company_id})
+    pending_work_orders = await db.work_orders.count_documents({"company_id": company_id, "status": WorkOrderStatus.PENDING})
+    in_progress_work_orders = await db.work_orders.count_documents({"company_id": company_id, "status": WorkOrderStatus.IN_PROGRESS})
+    completed_work_orders = await db.work_orders.count_documents({"company_id": company_id, "status": WorkOrderStatus.COMPLETED})
+    converted_work_orders = await db.work_orders.count_documents({"company_id": company_id, "status": WorkOrderStatus.CONVERTED_TO_AMC})
+    
+    # Pipeline value (sum of approved quotations)
+    pipeline = await db.quotations.aggregate([
+        {"$match": {"company_id": company_id, "status": QuotationStatus.APPROVED}},
+        {"$group": {"_id": None, "total": {"$sum": "$total"}}}
+    ]).to_list(1)
+    pipeline_value = pipeline[0]["total"] if pipeline else 0
+    
+    return {
+        "leads": {
+            "total": total_leads,
+            "new": new_leads,
+            "qualified": qualified_leads,
+            "won": won_leads,
+            "lost": lost_leads
+        },
+        "quotations": {
+            "total": total_quotations,
+            "pending": pending_quotations,
+            "approved": approved_quotations
+        },
+        "work_orders": {
+            "total": total_work_orders,
+            "pending": pending_work_orders,
+            "in_progress": in_progress_work_orders,
+            "completed": completed_work_orders,
+            "converted_to_amc": converted_work_orders
+        },
+        "pipeline_value": pipeline_value
+    }
+
 # ==================== HEALTH CHECK ====================
 
 @api_router.get("/health")
