@@ -16,6 +16,12 @@ import ServicesPage from './pages/admin/Services';
 import PoolsPage from './pages/admin/Pools';
 import SettingsPage from './pages/admin/Settings';
 
+// CRM Pages
+import CRMDashboard from './pages/admin/crm/CRMDashboard';
+import LeadsPage from './pages/admin/crm/LeadsPage';
+import QuotationsPage from './pages/admin/crm/QuotationsPage';
+import WorkOrdersPage from './pages/admin/crm/WorkOrdersPage';
+
 // Engineer Pages
 import EngineerDashboard from './pages/engineer/Dashboard';
 import EngineerHistory from './pages/engineer/History';
