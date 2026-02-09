@@ -31,7 +31,7 @@ import {
 } from '../../../components/ui/table';
 import { Plus, Search, Trash2, Eye, Loader2, Phone, Mail, MapPin, FileText } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatDate } from '../../lib/utils';
+import { formatDate } from '../../../lib/utils';
 import { useNavigate } from 'react-router-dom';
 
 const leadStatusOptions = [
