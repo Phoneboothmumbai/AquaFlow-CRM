@@ -125,6 +125,33 @@ function AppRoutes() {
                 </ProtectedRoute>
             } />
 
+            {/* CRM Routes */}
+            <Route path="/admin/crm" element={
+                <ProtectedRoute allowedRoles={['company_admin']}>
+                    <CRMDashboard />
+                </ProtectedRoute>
+            } />
+            <Route path="/admin/crm/leads" element={
+                <ProtectedRoute allowedRoles={['company_admin']}>
+                    <LeadsPage />
+                </ProtectedRoute>
+            } />
+            <Route path="/admin/crm/quotations" element={
+                <ProtectedRoute allowedRoles={['company_admin']}>
+                    <QuotationsPage />
+                </ProtectedRoute>
+            } />
+            <Route path="/admin/crm/quotations/new" element={
+                <ProtectedRoute allowedRoles={['company_admin']}>
+                    <QuotationsPage />
+                </ProtectedRoute>
+            } />
+            <Route path="/admin/crm/work-orders" element={
+                <ProtectedRoute allowedRoles={['company_admin']}>
+                    <WorkOrdersPage />
+                </ProtectedRoute>
+            } />
+
             {/* Engineer Routes */}
             <Route path="/engineer" element={
                 <ProtectedRoute allowedRoles={['engineer']}>
