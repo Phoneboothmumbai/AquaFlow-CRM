@@ -1767,8 +1767,8 @@ async def get_crm_dashboard(user: dict = Depends(require_company_admin)):
     # Work order stats
     total_work_orders = await db.work_orders.count_documents({"company_id": company_id})
     pending_work_orders = await db.work_orders.count_documents({"company_id": company_id, "status": WorkOrderStatus.PENDING})
-    in_progress_work_orders = await db.work_orders.count_documents({"company_id": company_id, "status": WorkOrderStatus.IN_PROGRESS})
-    completed_work_orders = await db.work_orders.count_documents({"company_id": company_id, "status": WorkOrderStatus.COMPLETED})
+    in_progress_work_orders = await db.work_orders.count_documents({"company_id": company_id, "status": {"$nin": [WorkOrderStatus.PENDING, WorkOrderStatus.READY, WorkOrderStatus.CONVERTED_TO_AMC]}})
+    completed_work_orders = await db.work_orders.count_documents({"company_id": company_id, "status": {"$in": [WorkOrderStatus.READY, WorkOrderStatus.CONVERTED_TO_AMC]}})
     converted_work_orders = await db.work_orders.count_documents({"company_id": company_id, "status": WorkOrderStatus.CONVERTED_TO_AMC})
     
     # Pipeline value (sum of approved quotations)
