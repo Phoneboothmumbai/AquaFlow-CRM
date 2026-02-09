@@ -1396,15 +1396,31 @@ async def update_work_order_status(work_order_id: str, status: str, user: dict =
     
     update_data = {"status": status, "updated_at": datetime.now(timezone.utc).isoformat()}
     
-    if status == WorkOrderStatus.IN_PROGRESS:
+    # Handle stage-based workflow
+    if status == WorkOrderStatus.BOQ:
         update_data["actual_start_date"] = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    elif status == WorkOrderStatus.COMPLETED:
+    elif status == WorkOrderStatus.READY or status == WorkOrderStatus.CONVERTED_TO_AMC:
         update_data["actual_end_date"] = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     
-    await db.work_orders.update_one(
+    result = await db.work_orders.update_one(
         {"id": work_order_id, "company_id": user["company_id"]},
         {"$set": update_data}
     )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Work order not found")
+    
+    # Log stage change in history
+    history_doc = {
+        "id": str(uuid.uuid4()),
+        "work_order_id": work_order_id,
+        "stage": status,
+        "changed_by": user["id"],
+        "changed_by_name": user["name"],
+        "notes": "",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.work_order_stage_history.insert_one(history_doc)
     
     return {"message": "Status updated"}
 
