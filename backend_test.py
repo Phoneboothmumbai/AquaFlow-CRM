@@ -505,6 +505,9 @@ def main():
         ("Admin Login", tester.test_admin_login),
         ("Dashboard Stats", tester.test_dashboard_stats),
         
+        # Enable CRM Module
+        ("Enable CRM Module", tester.test_enable_crm_module),
+        
         # Customer management
         ("Create Customer", tester.test_create_customer),
         ("Get Customers", tester.test_get_customers),
@@ -521,6 +524,21 @@ def main():
         ("Create Engineer", tester.test_create_engineer),
         ("Get Engineers", tester.test_get_engineers),
         ("Engineer Login", tester.test_engineer_login),
+        
+        # CRM Workflow: Lead -> Quotation -> Work Order -> AMC
+        ("Create Lead", tester.test_create_lead),
+        ("Get Leads", tester.test_get_leads),
+        ("Update Lead Status", tester.test_update_lead_status),
+        ("Create Quotation", tester.test_create_quotation),
+        ("Get Quotations", tester.test_get_quotations),
+        ("Send Quotation", tester.test_send_quotation),
+        ("Approve Quotation", tester.test_approve_quotation),
+        ("Create Work Order", tester.test_create_work_order),
+        ("Get Work Orders", tester.test_get_work_orders),
+        ("Start Work Order", tester.test_start_work_order),
+        ("Complete Work Order", tester.test_complete_work_order),
+        ("Convert Work Order to AMC", tester.test_convert_work_order_to_amc),
+        ("CRM Dashboard Stats", tester.test_crm_dashboard_stats),
         
         # AMC Assignment (triggers service generation)
         ("Assign AMC to Pool", tester.test_assign_amc_to_pool),
