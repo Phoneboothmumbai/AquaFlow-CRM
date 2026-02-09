@@ -110,4 +110,48 @@ export const dashboardAPI = {
     getStats: () => api.get('/dashboard/stats'),
 };
 
+// CRM APIs
+export const crmAPI = {
+    // Dashboard
+    getDashboard: () => api.get('/crm/dashboard'),
+    
+    // Leads
+    createLead: (data) => api.post('/crm/leads', data),
+    getLeads: (status) => api.get('/crm/leads', { params: { status } }),
+    getLead: (id) => api.get(`/crm/leads/${id}`),
+    updateLead: (id, data) => api.put(`/crm/leads/${id}`, data),
+    deleteLead: (id) => api.delete(`/crm/leads/${id}`),
+    
+    // Quotations
+    createQuotation: (data) => api.post('/crm/quotations', data),
+    getQuotations: (params) => api.get('/crm/quotations', { params }),
+    getQuotation: (id) => api.get(`/crm/quotations/${id}`),
+    updateQuotationStatus: (id, status) => api.put(`/crm/quotations/${id}/status?status=${status}`),
+    reviseQuotation: (id, data) => api.post(`/crm/quotations/${id}/revise`, data),
+    
+    // Work Orders
+    createWorkOrder: (data) => api.post('/crm/work-orders', data),
+    getWorkOrders: (status) => api.get('/crm/work-orders', { params: { status } }),
+    getWorkOrder: (id) => api.get(`/crm/work-orders/${id}`),
+    updateWorkOrderStatus: (id, status) => api.put(`/crm/work-orders/${id}/status?status=${status}`),
+    
+    // BOQ
+    createBOQItem: (data) => api.post('/crm/boq', data),
+    getBOQItems: (workOrderId) => api.get('/crm/boq', { params: { work_order_id: workOrderId } }),
+    deleteBOQItem: (id) => api.delete(`/crm/boq/${id}`),
+    
+    // Deliveries
+    createDelivery: (data) => api.post('/crm/deliveries', data),
+    getDeliveries: (workOrderId) => api.get('/crm/deliveries', { params: { work_order_id: workOrderId } }),
+    updateDeliveryStatus: (id, status) => api.put(`/crm/deliveries/${id}/status?status=${status}`),
+    
+    // Installations
+    createInstallation: (data) => api.post('/crm/installations', data),
+    getInstallations: (workOrderId) => api.get('/crm/installations', { params: { work_order_id: workOrderId } }),
+    updateInstallation: (id, data) => api.put(`/crm/installations/${id}`, data),
+    
+    // AMC Conversion
+    convertToAMC: (data) => api.post('/crm/convert-to-amc', data),
+};
+
 export default api;
