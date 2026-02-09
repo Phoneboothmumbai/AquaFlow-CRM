@@ -139,6 +139,40 @@ export function AdminLayout({ children }) {
                                 </Link>
                             );
                         })}
+
+                        {/* CRM Section */}
+                        {crmEnabled && (
+                            <>
+                                {!collapsed && (
+                                    <div className="pt-4 pb-2">
+                                        <p className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                            Sales CRM
+                                        </p>
+                                    </div>
+                                )}
+                                {crmNavItems.map((item) => {
+                                    const isActive = location.pathname === item.path || 
+                                        (item.path !== '/admin/crm' && location.pathname.startsWith(item.path));
+                                    return (
+                                        <Link
+                                            key={item.path}
+                                            to={item.path}
+                                            onClick={() => setSidebarOpen(false)}
+                                            data-testid={`nav-crm-${item.label.toLowerCase().replace(' ', '-')}`}
+                                            className={cn(
+                                                "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors",
+                                                isActive
+                                                    ? "bg-primary text-white"
+                                                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                                            )}
+                                        >
+                                            <item.icon className="h-5 w-5 flex-shrink-0" />
+                                            {!collapsed && <span className="font-medium">{item.label}</span>}
+                                        </Link>
+                                    );
+                                })}
+                            </>
+                        )}
                     </nav>
 
                     {/* Collapse Button (Desktop) */}
