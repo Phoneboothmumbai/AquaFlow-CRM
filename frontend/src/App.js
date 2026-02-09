@@ -21,6 +21,7 @@ import CRMDashboard from './pages/admin/crm/CRMDashboard';
 import LeadsPage from './pages/admin/crm/LeadsPage';
 import QuotationsPage from './pages/admin/crm/QuotationsPage';
 import WorkOrdersPage from './pages/admin/crm/WorkOrdersPage';
+import WorkOrderDetail from './pages/admin/crm/WorkOrderDetail';
 
 // Engineer Pages
 import EngineerDashboard from './pages/engineer/Dashboard';
@@ -149,6 +150,11 @@ function AppRoutes() {
             <Route path="/admin/crm/work-orders" element={
                 <ProtectedRoute allowedRoles={['company_admin']}>
                     <WorkOrdersPage />
+                </ProtectedRoute>
+            } />
+            <Route path="/admin/crm/work-orders/:id" element={
+                <ProtectedRoute allowedRoles={['company_admin']}>
+                    <WorkOrderDetail />
                 </ProtectedRoute>
             } />
 
