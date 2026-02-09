@@ -51,7 +51,7 @@ export default function LoginPage() {
                         <Droplets className="h-8 w-8 text-white" />
                     </div>
                     <CardTitle className="text-2xl font-heading">Welcome Back</CardTitle>
-                    <CardDescription>Sign in to your Graand Prix account</CardDescription>
+                    <CardDescription>Sign in to your AquaFlow CRM account</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-4">

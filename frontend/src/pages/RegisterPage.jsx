@@ -49,7 +49,7 @@ export default function RegisterPage() {
                 phone: formData.phone,
                 role: 'company_admin'
             });
-            toast.success('Registration successful! Welcome to Graand Prix.');
+            toast.success('Registration successful! Welcome to AquaFlow CRM.');
             navigate('/admin');
         } catch (error) {
             toast.error(error.response?.data?.detail || 'Registration failed');

@@ -32,10 +32,10 @@ export function CustomerLayout({ children }) {
             <header className="fixed top-0 left-0 right-0 h-16 bg-white dark:bg-slate-900 border-b border-border z-40 flex items-center justify-between px-4">
                 <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                        <span className="text-white font-bold text-sm">GP</span>
+                        <span className="text-white font-bold text-sm">AF</span>
                     </div>
                     <div>
-                        <h1 className="font-heading font-semibold text-base">Graand Prix</h1>
+                        <h1 className="font-heading font-semibold text-base">AquaFlow CRM</h1>
                         <p className="text-xs text-muted-foreground">Customer Portal</p>
                     </div>
                 </div>
