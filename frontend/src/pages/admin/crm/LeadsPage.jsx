@@ -92,23 +92,38 @@ export default function LeadsPage() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        e.stopPropagation();
+        
+        if (!formData.customer_name || !formData.phone) {
+            toast.error('Please fill required fields (Name and Phone)');
+            return;
+        }
+        
         setSaving(true);
         try {
             // Clean up empty string values - send only non-empty fields
-            const cleanData = Object.fromEntries(
-                Object.entries(formData).filter(([_, v]) => v !== '' && v !== null && v !== undefined)
-            );
-            await crmAPI.createLead(cleanData);
+            const cleanData = {};
+            for (const [key, value] of Object.entries(formData)) {
+                if (value !== '' && value !== null && value !== undefined) {
+                    cleanData[key] = value;
+                }
+            }
+            
+            console.log('Submitting lead data:', cleanData);
+            const response = await crmAPI.createLead(cleanData);
+            console.log('Lead created:', response);
+            
             toast.success('Lead created successfully');
-            setShowAddModal(false);
             setFormData({
                 customer_name: '', email: '', phone: '', address: '', city: '',
                 pool_type: '', pool_size: '', requirement: '', source: '', notes: ''
             });
+            setShowAddModal(false);
             loadLeads();
         } catch (error) {
-            console.error('Lead creation error:', error);
-            toast.error(error.response?.data?.detail || 'Failed to create lead');
+            console.error('Lead creation error:', error.response || error);
+            const errorMsg = error.response?.data?.detail || error.message || 'Failed to create lead';
+            toast.error(errorMsg);
         } finally {
             setSaving(false);
         }
