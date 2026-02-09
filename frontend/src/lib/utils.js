@@ -5,9 +5,17 @@ export function cn(...inputs) {
     return twMerge(clsx(inputs));
 }
 
-export function formatDate(dateString) {
+export function formatDate(dateString, includeTime = false) {
     if (!dateString) return '';
     const date = new Date(dateString);
+    if (includeTime) {
+        return date.toLocaleString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
     return date.toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',
