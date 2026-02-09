@@ -250,3 +250,58 @@ class AMCConversionCreate(BaseModel):
     start_date: str
     end_date: str
     assigned_engineer_id: Optional[str] = None
+
+# Comment Models
+class CommentCreate(BaseModel):
+    work_order_id: str
+    message: str
+
+class CommentResponse(BaseModel):
+    id: str
+    work_order_id: str
+    user_id: str
+    user_name: str
+    message: str
+    created_at: str
+
+# Stage History Models
+class StageHistoryResponse(BaseModel):
+    id: str
+    work_order_id: str
+    stage: str
+    changed_by: str
+    changed_by_name: str
+    notes: Optional[str] = None
+    created_at: str
+
+# Task Assignment Models
+class TaskCreate(BaseModel):
+    work_order_id: str
+    title: str
+    description: Optional[str] = None
+    assigned_to: str
+    due_date: Optional[str] = None
+    stage: Optional[str] = None
+
+class TaskUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    assigned_to: Optional[str] = None
+    due_date: Optional[str] = None
+    status: Optional[str] = None
+    completion_notes: Optional[str] = None
+
+class TaskResponse(BaseModel):
+    id: str
+    company_id: str
+    work_order_id: str
+    title: str
+    description: Optional[str] = None
+    assigned_to: str
+    assigned_to_name: Optional[str] = None
+    due_date: Optional[str] = None
+    stage: Optional[str] = None
+    status: str = "pending"  # pending, in_progress, completed
+    completion_notes: Optional[str] = None
+    created_at: str
+    updated_at: str
