@@ -161,6 +161,34 @@ export default function SettingsPage() {
                         </CardContent>
                     </Card>
 
+                    {/* CRM Module */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-lg flex items-center gap-2">
+                                <TrendingUp className="h-5 w-5" />
+                                Sales CRM Module
+                            </CardTitle>
+                            <CardDescription>
+                                Enable sales pipeline management with leads, quotations, and work orders
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="font-medium">Enable CRM Module</p>
+                                    <p className="text-sm text-muted-foreground">
+                                        Manage leads, quotations, work orders, and convert to AMC
+                                    </p>
+                                </div>
+                                <Switch
+                                    checked={company.crm_enabled}
+                                    onCheckedChange={(checked) => setCompany({ ...company, crm_enabled: checked })}
+                                    data-testid="crm-enabled-switch"
+                                />
+                            </div>
+                        </CardContent>
+                    </Card>
+
                     <Button type="submit" disabled={saving} data-testid="save-settings-btn">
                         {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                         Save Settings
