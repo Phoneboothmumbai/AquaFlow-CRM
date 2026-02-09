@@ -94,7 +94,11 @@ export default function LeadsPage() {
         e.preventDefault();
         setSaving(true);
         try {
-            await crmAPI.createLead(formData);
+            // Clean up empty string values - send only non-empty fields
+            const cleanData = Object.fromEntries(
+                Object.entries(formData).filter(([_, v]) => v !== '' && v !== null && v !== undefined)
+            );
+            await crmAPI.createLead(cleanData);
             toast.success('Lead created successfully');
             setShowAddModal(false);
             setFormData({
@@ -103,6 +107,7 @@ export default function LeadsPage() {
             });
             loadLeads();
         } catch (error) {
+            console.error('Lead creation error:', error);
             toast.error(error.response?.data?.detail || 'Failed to create lead');
         } finally {
             setSaving(false);
