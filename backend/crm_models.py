@@ -1,5 +1,5 @@
 """
-CRM & Sales Module for Graand Prix Pool Service Management
+CRM & Sales Module for AquaFlow CRM Pool Service Management
 This module handles: Leads, Quotations, Work Orders, BOQ, Deliveries, Installations
 """
 from fastapi import APIRouter, HTTPException, Depends

@@ -22,12 +22,12 @@ client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
 # JWT Configuration
-JWT_SECRET = os.environ.get('JWT_SECRET', 'graandprix-secret-key-2024')
+JWT_SECRET = os.environ.get('JWT_SECRET', 'aquaflow-secret-key-2024')
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24
 
 # Create the main app
-app = FastAPI(title="Graand Prix - Pool Service Management")
+app = FastAPI(title="AquaFlow CRM - Pool Service Management")
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
